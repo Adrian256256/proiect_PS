@@ -26,11 +26,14 @@ class GSMScanner:
     """Scans GSM spectrum using RTL-SDR"""
     
     # Romanian GSM providers and their typical frequency ranges (MHz)
+    # Note: These are approximate ranges. Actual allocations may vary by region.
+    # GSM-900 downlink: 935-960 MHz (25 MHz total)
+    # GSM-1800 downlink: 1805-1880 MHz (75 MHz total)
     ROMANIAN_PROVIDERS = {
-        "Orange": [(935.0, 945.0), (1805.0, 1825.0)],
-        "Vodafone": [(945.0, 955.0), (1825.0, 1845.0)],
-        "Telekom": [(955.0, 960.0), (1845.0, 1865.0)],
-        "Digi": [(940.0, 950.0), (1860.0, 1880.0)]
+        "Orange": [(935.0, 941.0), (1805.0, 1825.0)],     # ~6 MHz in GSM900
+        "Vodafone": [(941.0, 948.0), (1825.0, 1850.0)],   # ~7 MHz in GSM900
+        "Telekom": [(948.0, 954.0), (1850.0, 1870.0)],    # ~6 MHz in GSM900
+        "Digi": [(954.0, 960.0), (1870.0, 1880.0)]        # ~6 MHz in GSM900
     }
     
     def __init__(self, gain=40):
@@ -208,12 +211,34 @@ class GSMScanner:
 if __name__ == "__main__":
     # Test the scanner
     scanner = GSMScanner()
-    print("Starting GSM scan...")
+    print("Starting GSM scan...\n")
     
-    signals = scanner.scan_gsm900()
-    print(f"\nFound {len(signals)} signals in GSM-900 band")
+    # Scan GSM-900
+    signals_900 = scanner.scan_gsm900()
+    print(f"Found {len(signals_900)} signals in GSM-900 band\n")
     
-    aggregated = scanner.aggregate_by_provider(signals)
-    print("\nSignal strength by provider:")
-    for provider, power in aggregated.items():
-        print(f"{provider}: {power:.2f}")
+    # Scan GSM-1800
+    signals_1800 = scanner.scan_gsm1800()
+    print(f"Found {len(signals_1800)} signals in GSM-1800 band\n")
+    
+    # Combine all signals
+    all_signals = signals_900 + signals_1800
+    print(f"Total signals detected: {len(all_signals)}\n")
+    
+    # Show signal count per provider
+    provider_counts = {}
+    for signal in all_signals:
+        provider_counts[signal.provider] = provider_counts.get(signal.provider, 0) + 1
+    
+    print("Signals per provider:")
+    for provider, count in sorted(provider_counts.items()):
+        print(f"  {provider}: {count} signals")
+    
+    # Show average signal strength
+    aggregated = scanner.aggregate_by_provider(all_signals)
+    print("\nAverage signal strength by provider:")
+    for provider in ["Orange", "Vodafone", "Telekom", "Digi"]:
+        if provider in aggregated:
+            print(f"  {provider}: {aggregated[provider]:.2f} dBm")
+        else:
+            print(f"  {provider}: No signal detected")

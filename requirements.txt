@@ -1,9 +1,24 @@
-# GSM Signal Monitor Requirements
+# GSM Signal Monitor - Python Dependencies
 
-# Note: Hardware dependencies (install via system package manager)
-# macOS: brew install rtl-sdr kalibrate-rtl
-# Linux: sudo apt-get install rtl-sdr kalibrate-rtl
+# All dependencies are part of Python standard library
+# Python 3.7+ required
 
-# Python dependencies
-# Standard library modules used: tkinter, subprocess, threading, re, time, dataclasses
-# No additional pip packages required for basic functionality
+# System Dependencies (install separately):
+# macOS:
+#   brew install rtl-sdr kalibrate-rtl
+# Linux (Debian/Ubuntu):
+#   sudo apt-get install rtl-sdr kalibrate-rtl librtlsdr-dev
+# Windows:
+#   Download from https://www.rtl-sdr.com/
+
+# Standard library modules used:
+# - tkinter (GUI framework)
+# - subprocess (RTL-SDR command execution)
+# - threading (background scanning)
+# - re (regex parsing)
+# - time, datetime (timing and timestamps)
+# - dataclasses (data structures)
+# - typing (type hints)
+# - os, tempfile (file operations)
+
+# No pip packages required for basic functionality
