@@ -1,252 +1,145 @@
-# 📡 GSM Detector Romania - RTL-SDR
+# RTL-SDR Project: GSM Spectrum Monitoring and Analysis
 
-GSM band detector for Romania using RTL-SDR to scan and measure GSM signal strength from different providers (Orange, Vodafone, Telekom, Digi).
+## Description
 
-## 🎯 Features
+This project uses an RTL-SDR (Software Defined Radio) device to monitor and analyze GSM signals in the area. The purpose is educational, aiming to understand the radio spectrum and mobile networks.
 
-- ✅ Scan GSM 900 MHz band (935-960 MHz downlink)
-- ✅ Scan GSM 1800 MHz band (1805-1880 MHz downlink)
-- ✅ Measure signal power in dBm for each frequency
-- ✅ Identify and analyze signals from providers: Orange, Vodafone, Telekom, Digi
-- ✅ Interactive plots with scan results
-- ✅ Export results in JSON format
-- ✅ Real-time progress display during scanning
+## Objectives
 
-## 📋 Hardware Requirements
+1. Visualization of GSM frequency bands
+   - GSM 900 MHz (935-960 MHz downlink)
+   - GSM 1800 MHz (1805-1880 MHz downlink)
 
-### RTL-SDR
-You need an **RTL-SDR** device (RTL2832U):
-- **Recommended**: RTL-SDR Blog V3 or V4
-- **Frequency range**: 500 kHz - 1.7 GHz (minimum)
-- **Connection**: USB 2.0 or 3.0
-- **Antenna**: Telescopic or dipole for GSM bands
+2. Identification of active channels
+   - Detection of frequencies used by operators
+   - Mapping of ARFCN channels (Absolute Radio Frequency Channel Number)
 
-### Where to buy RTL-SDR in Romania:
-- [RTL-SDR.com](https://www.rtl-sdr.com/buy-rtl-sdr-dvb-t-dongles/) - ~$35-45 (with international shipping)
-- Local electronics stores
-- AliExpress / eBay (~$25-30)
+3. Signal strength measurement (RSSI)
+   - Real-time signal intensity monitoring
+   - Comparison of power levels between different cells
 
-## 🔧 Installation
+4. Coverage map creation
+   - Collection of GPS data and signal strength
+   - Generation of coverage maps for different operators
 
-### 1. Install RTL-SDR drivers (macOS)
+## Required Hardware
 
-```bash
-# Install Homebrew if you don't have it
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+- RTL-SDR Dongle (RTL2832U chipset)
+- Antenna optimized for 900-1800 MHz
+- Computer (macOS/Linux/Windows)
 
-# Install librtlsdr
-brew install librtlsdr
-```
-
-### 2. Verify RTL-SDR device
+## Required Software
 
 ```bash
-# Connect RTL-SDR to USB
-# Test if it's detected
-rtl_test -t
+# Installation on macOS
+brew install rtl-sdr
+brew install kalibrate-rtl
+brew install gqrx
 ```
 
-You should see:
-```
-Found 1 device(s):
-  0:  Realtek, RTL2838UHIDIR, SN: 00000001
-```
+## Usage
 
-### 3. Install Python dependencies
+### GUI Application - Real-time Signal Monitor
+
+The project includes a graphical interface that monitors GSM signal strength from Romanian providers in real-time.
 
 ```bash
-# Clone or download the project
-cd /path/to/project
-
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install pyrtlsdr numpy matplotlib scipy setuptools
+# Run the GUI application
+python3 gsm_monitor_gui.py
 ```
 
-## 🚀 Usage
+Features:
+- Real-time signal strength monitoring for Orange, Vodafone, Telekom, and Digi
+- Visual progress bars showing relative signal strength
+- Automatic scanning every 5 seconds with countdown timer
+- Value change indicators (arrows showing improvement or degradation)
+- Timestamp of last update
+- Clean dark blue interface
 
-### Method 1: Bash script (recommended)
+### How Signal Strength Values Are Calculated
 
+The signal strength values displayed in the GUI are measured in **dBm (decibels-milliwatt)**, which is a standard unit for RF power measurement.
+
+#### Measurement Process:
+
+1. **Spectrum Scanning**: The RTL-SDR device scans GSM frequency bands (935-960 MHz for GSM-900 and 1805-1880 MHz for GSM-1800) using the `rtl_power` tool
+
+2. **Power Detection**: For each frequency bin (200 kHz wide), the tool measures the RF power level in dBm:
+   - Higher values (closer to 0) = Stronger signal
+   - Lower values (more negative) = Weaker signal
+   - Example: -10 dBm is stronger than -30 dBm
+
+3. **Provider Identification**: Signals are mapped to providers based on frequency ranges:
+   - Orange: 935-945 MHz, 1805-1825 MHz
+   - Vodafone: 945-955 MHz, 1825-1845 MHz
+   - Telekom: 955-960 MHz, 1845-1865 MHz
+   - Digi: 940-950 MHz, 1860-1880 MHz
+
+4. **Averaging**: Multiple power measurements within a provider's frequency range are averaged to give a single representative value
+
+5. **Display**: Values are shown with 2 decimal places (e.g., -17.35 dBm) with color-coded arrows:
+   - Green up arrow (↑): Signal improved since last scan
+   - Red down arrow (↓): Signal degraded since last scan
+   - No arrow: Signal unchanged
+
+#### Typical Value Ranges:
+- **-10 to -50 dBm**: Excellent signal (close to cell tower)
+- **-50 to -70 dBm**: Good signal (normal coverage)
+- **-70 to -90 dBm**: Weak signal (edge of coverage)
+- **Below -90 dBm**: Very weak signal (poor coverage)
+
+**Note**: These are passive measurements of broadcast signals only. No private communications are intercepted.
+
+### Command Line Tools
+
+#### Quick GSM-900 scan
 ```bash
-chmod +x run.sh
-./run.sh
+kal -s GSM900 -g 40
 ```
 
-### Method 2: Direct with Python
-
+#### Test the scanner module
 ```bash
-source .venv/bin/activate
-python3 GSM_detector.py
+python3 gsm_scanner.py
 ```
 
-## 📊 Results
+#### Spectrum visualization in GQRX
+1. Open GQRX
+2. Set frequency to 945 MHz (GSM-900 band center)
+3. Observe active channels
 
-The application will generate:
-
-1. **Console output**: Displays real-time scanning progress
-2. **PNG plot** (`images/gsm_scan_results.png`): Signal power visualization across bands
-3. **JSON file** (`gsm_results.json`): Raw data for further analysis
-
-### Example output:
-
-```
-╔════════════════════════════════════════════════════════════╗
-║         GSM DETECTOR ROMANIA - RTL-SDR                     ║
-║         Scanning GSM 900 and 1800 MHz bands                ║
-╚════════════════════════════════════════════════════════════╝
-
-============================================================
-🔍 GSM DETECTOR ROMANIA - Full Scan
-============================================================
-Time: 2025-12-02 15:30:45
-
-📡 Scanning GSM-900 (GSM 900 Downlink)
-   Range: 935.0 - 960.0 MHz
-   935.000 MHz: -65.3 dBm [0%]
-   ...
-✓ Scan complete: 125 points
-
-📊 Analysis GSM-900:
-   Orange      : Max= -52.1 dBm @ 942.50 MHz
-   Vodafone    : Max= -58.3 dBm @ 945.20 MHz
-   Telekom     : Max= -61.5 dBm @ 948.80 MHz
-   Digi        : Max= -64.2 dBm @ 951.40 MHz
-
-📡 Scanning GSM-1800 (GSM 1800 Downlink (DCS))
-   Range: 1805.0 - 1880.0 MHz
-   ...
-```
-
-## 📈 Interpreting Results
-
-### Signal Power (dBm)
-
-| dBm Level | Quality | Description |
-|-----------|---------|-------------|
-| -50 dBm   | Excellent | Very strong signal (very close to tower) |
-| -60 dBm   | Very good | Strong signal (tower proximity) |
-| -70 dBm   | Good | Good signal (normal urban coverage) |
-| -80 dBm   | Acceptable | Medium signal (edge of coverage) |
-| -90 dBm   | Weak | Weak signal (poor coverage area) |
-| -100 dBm  | Very weak | Very weak signal (usability limit) |
-| -120 dBm  | Noise | No detectable GSM signal |
-
-### GSM Providers in Romania
-
-- **🟠 Orange**: Main operator, extensive national coverage
-- **🔴 Vodafone**: Very good urban coverage
-- **🟣 Telekom (Magenta)**: Good coverage, especially urban areas
-- **🔵 Digi**: Newer operator, growing coverage
-
-## 🔬 GSM Bands in Romania
-
-### GSM 900 MHz
-- **Downlink**: 935-960 MHz (scanned by application)
-- **Uplink**: 890-915 MHz
-- **Usage**: Wide area coverage, good building penetration
-- **Operators**: All 4 providers
-
-### GSM 1800 MHz (DCS)
-- **Downlink**: 1805-1880 MHz (scanned by application)
-- **Uplink**: 1710-1785 MHz
-- **Usage**: High capacity, urban areas
-- **Operators**: All 4 providers
-
-## ⚠️ Legal Notice
-
-### Legality in Romania
-✅ **Legal**: Receiving GSM signals (scanning, monitoring)
-❌ **Illegal**: 
-- Decoding communications (interception)
-- Interference with mobile networks
-- Transmission on GSM bands without license
-
-This tool **only listens** to public GSM signals and measures their power - **completely legal**.
-
-## 🐛 Troubleshooting
-
-### Error: "RTL-SDR not found"
+#### Signal strength monitoring
 ```bash
-# Check device
-rtl_test
-
-# Check USB permissions (Linux)
-sudo usermod -a -G plugdev $USER
-# Logout and login again
-
-# macOS - reinstall drivers
-brew reinstall librtlsdr
+rtl_power -f 935M:960M:200k -g 40 -i 1 gsm900_scan.csv
 ```
 
-### Error: "No module named 'rtlsdr'"
-```bash
-# Activate virtual environment
-source .venv/bin/activate
+## Legal Considerations
 
-# Reinstall pyrtlsdr
-pip install --upgrade pyrtlsdr
-```
+- Passive monitoring only - no interception of private communications
+- Educational purposes - compliance with telecommunications legislation
+- Public channels - only broadcast information is analyzed
 
-### Error: "No module named 'pkg_resources'"
-```bash
-# Install setuptools
-pip install setuptools
-```
+## Expected Results
 
-### Very weak signal power (-120 dBm everywhere)
-- Check RTL-SDR antenna (should be fully extended)
-- Place RTL-SDR near a window
-- Avoid metal objects nearby
-- Check gain: try setting manually (e.g., `gain=30`)
+- Identification of active frequencies in the area
+- Coverage maps for mobile operators
+- Statistics about GSM cell density
+- Radio spectrum visualizations
+- Real-time signal strength comparison between providers
 
-### Noisy signal
-```python
-# In GSM_detector.py, modify:
-detector = GSMDetector(sample_rate=2.4e6, gain=20)  # Manual gain
-```
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
-├── GSM_detector.py       # Main application
-├── run.sh                # Launch script
-├── README.md             # Romanian documentation
-├── README_EN.md          # English documentation (this file)
-├── images/               # Generated plots
-│   └── gsm_scan_results.png
-├── gsm_results.json      # Scan results
-└── .venv/                # Python virtual environment
+├── README.md                 # Project documentation
+├── requirements.txt          # Python dependencies
+├── gsm_scanner.py           # Core scanning module
+└── gsm_monitor_gui.py       # GUI application
 ```
 
-## 📚 References
+## Resources
 
-- [RTL-SDR Documentation](https://www.rtl-sdr.com)
-- [GSM Frequencies Romania - ANCOM](https://www.ancom.ro)
-- [PyRTLSDR Library](https://github.com/roger-/pyrtlsdr)
-- [GSM Architecture](https://en.wikipedia.org/wiki/GSM_frequency_bands)
-
-## 🤝 Contributing
-
-Contributions are welcome! If you have suggestions or improvements:
-1. Fork the repository
-2. Create a branch for your feature
-3. Commit your changes
-4. Create a Pull Request
-
-## 📄 License
-
-This project is provided "as-is" for educational purposes.
-
-## 👨‍💻 Author
-
-Created for PS project - Faculty
+- [RTL-SDR Wiki](https://www.rtl-sdr.com/)
+- [Kalibrate-rtl Documentation](https://github.com/steve-m/kalibrate-rtl)
+- [GSM Frequency Bands](https://en.wikipedia.org/wiki/GSM_frequency_bands)
 
 ---
-
-**Last updated**: December 2, 2025
-
-For questions or issues, please open an issue on GitHub! 🚀

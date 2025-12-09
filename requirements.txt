@@ -1,0 +1,9 @@
+# GSM Signal Monitor Requirements
+
+# Note: Hardware dependencies (install via system package manager)
+# macOS: brew install rtl-sdr kalibrate-rtl
+# Linux: sudo apt-get install rtl-sdr kalibrate-rtl
+
+# Python dependencies
+# Standard library modules used: tkinter, subprocess, threading, re, time, dataclasses
+# No additional pip packages required for basic functionality
