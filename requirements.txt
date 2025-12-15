@@ -18,6 +18,9 @@
 # - re (regex parsing)
 # - time, datetime (timing and timestamps)
 # - dataclasses (data structures)
+
+# External dependencies:
+matplotlib>=3.5.0
 # - typing (type hints)
 # - os, tempfile (file operations)
 

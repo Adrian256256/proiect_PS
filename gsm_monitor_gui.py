@@ -8,6 +8,11 @@ from tkinter import ttk
 from gsm_scanner import GSMScanner
 import threading
 from datetime import datetime
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from collections import deque
 
 
 class GSMMonitorGUI:
@@ -24,7 +29,7 @@ class GSMMonitorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("GSM Signal Monitor - Romania")
-        self.root.geometry("750x720")
+        self.root.geometry("1450x850")  # Optimized for two-column layout
         self.root.resizable(True, True)
         self.root.configure(bg="#1A2332")  # Dark blue background
         
@@ -34,6 +39,14 @@ class GSMMonitorGUI:
         self.next_update_seconds = 0
         self.countdown_timer = None
         self.previous_values = {}  # Store previous values for comparison
+        
+        # Signal history for graphs (store last 50 data points per provider)
+        self.signal_history = {
+            "Orange": {"times": deque(maxlen=50), "powers": deque(maxlen=50)},
+            "Vodafone": {"times": deque(maxlen=50), "powers": deque(maxlen=50)},
+            "Telekom": {"times": deque(maxlen=50), "powers": deque(maxlen=50)},
+            "Digi": {"times": deque(maxlen=50), "powers": deque(maxlen=50)}
+        }
         
         self.setup_ui()
         
@@ -62,13 +75,22 @@ class GSMMonitorGUI:
         )
         subtitle_label.place(x=20, y=50)
         
-        # Main content
+        # Main content - Two column layout
         content_frame = tk.Frame(self.root, bg="#1A2332")
         content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
-        # Info panel
-        info_frame = tk.Frame(content_frame, bg="#263447", relief=tk.RIDGE, bd=2)
-        info_frame.pack(fill=tk.X, pady=(0, 15), padx=5)
+        # Left column - Info, Signal Bars, Controls (fixed width)
+        left_column = tk.Frame(content_frame, bg="#1A2332", width=550)
+        left_column.pack(side=tk.LEFT, fill=tk.Y, expand=False, padx=(0, 10))
+        left_column.pack_propagate(False)  # Maintain fixed width
+        
+        # Right column - Graphs (expandable)
+        right_column = tk.Frame(content_frame, bg="#1A2332")
+        right_column.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        # Info panel (LEFT COLUMN)
+        info_frame = tk.Frame(left_column, bg="#263447", relief=tk.RIDGE, bd=2)
+        info_frame.pack(fill=tk.X, pady=(0, 15))
         
         info_title = tk.Label(
             info_frame,
@@ -108,9 +130,9 @@ class GSMMonitorGUI:
         )
         self.countdown_label.pack(pady=(0, 8), anchor="w", padx=15)
         
-        # Signal strength panel
-        signal_frame = tk.Frame(content_frame, bg="#263447", relief=tk.RIDGE, bd=2)
-        signal_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
+        # Signal strength panel (LEFT COLUMN)
+        signal_frame = tk.Frame(left_column, bg="#263447", relief=tk.RIDGE, bd=2)
+        signal_frame.pack(fill=tk.X, pady=(0, 15))
         
         signal_title = tk.Label(
             signal_frame,
@@ -140,9 +162,63 @@ class GSMMonitorGUI:
         for provider in providers:
             self.create_provider_row(providers_container, provider)
         
-        # Control panel
-        control_frame = tk.Frame(content_frame, bg="#263447", relief=tk.RIDGE, bd=2)
-        control_frame.pack(fill=tk.X, padx=5)
+        # Graph panel - RIGHT COLUMN
+        graph_frame = tk.Frame(right_column, bg="#263447", relief=tk.RIDGE, bd=2)
+        graph_frame.pack(fill=tk.BOTH, expand=True)
+        
+        graph_title = tk.Label(
+            graph_frame,
+            text="Signal Attenuation Over Time",
+            font=("Helvetica", 12, "bold"),
+            bg="#263447",
+            fg="#FFFFFF"
+        )
+        graph_title.pack(pady=(8, 3), anchor="w", padx=15)
+        
+        graph_subtitle = tk.Label(
+            graph_frame,
+            text="Real-time signal strength progression for each provider (last 50 measurements)",
+            font=("Helvetica", 9, "italic"),
+            bg="#263447",
+            fg="#7A8BA0"
+        )
+        graph_subtitle.pack(pady=(0, 5), anchor="w", padx=15)
+        
+        # Create matplotlib figure for right column (2x2 grid)
+        self.fig = Figure(figsize=(8, 8), facecolor='#263447')
+        self.fig.subplots_adjust(left=0.10, right=0.95, top=0.95, bottom=0.08, hspace=0.35, wspace=0.30)
+        
+        # Create 2x2 subplot grid for 4 providers
+        self.axes = {}
+        providers_grid = [
+            ("Orange", 0, 0),
+            ("Vodafone", 0, 1),
+            ("Telekom", 1, 0),
+            ("Digi", 1, 1)
+        ]
+        
+        for provider, row, col in providers_grid:
+            ax = self.fig.add_subplot(2, 2, row * 2 + col + 1)
+            ax.set_facecolor('#1A2332')
+            ax.set_title(provider, color=self.PROVIDER_COLORS[provider], fontsize=12, fontweight='bold', pad=8)
+            ax.set_xlabel('Time', color='#A0B0C0', fontsize=9)
+            ax.set_ylabel('Power (dBm)', color='#A0B0C0', fontsize=9)
+            ax.tick_params(colors='#7A8BA0', labelsize=8)
+            ax.grid(True, alpha=0.2, color='#5A6A7A')
+            ax.spines['bottom'].set_color('#5A6A7A')
+            ax.spines['top'].set_color('#5A6A7A')
+            ax.spines['left'].set_color('#5A6A7A')
+            ax.spines['right'].set_color('#5A6A7A')
+            self.axes[provider] = ax
+        
+        # Canvas for matplotlib
+        self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
+        # Control panel (LEFT COLUMN)
+        control_frame = tk.Frame(left_column, bg="#263447", relief=tk.RIDGE, bd=2)
+        control_frame.pack(fill=tk.X)
         
         control_title = tk.Label(
             control_frame,
@@ -153,18 +229,17 @@ class GSMMonitorGUI:
         )
         control_title.pack(pady=(10, 5))
         
-        # Control buttons
-        button_frame = tk.Frame(control_frame, bg="#263447")
-        button_frame.pack(pady=(5, 15))
+        # Control buttons - stacked vertically for left column
+        button_container = tk.Frame(control_frame, bg="#263447")
+        button_container.pack(pady=(5, 15), padx=15, fill=tk.X)
         
         self.start_button = tk.Button(
-            button_frame,
+            button_container,
             text="▶ Start Scanning",
             command=self.start_scan,
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 11, "bold"),
             bg="#27AE60",
-            fg="#000000",  # Black text for better visibility
-            width=20,
+            fg="#000000",
             height=2,
             relief=tk.RAISED,
             bd=3,
@@ -172,16 +247,15 @@ class GSMMonitorGUI:
             activebackground="#229954",
             activeforeground="#000000"
         )
-        self.start_button.pack(side=tk.LEFT, padx=8)
+        self.start_button.pack(fill=tk.X, pady=(0, 8))
         
         self.stop_button = tk.Button(
-            button_frame,
+            button_container,
             text="■ Stop Scanning",
             command=self.stop_scan,
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 11, "bold"),
             bg="#E74C3C",
-            fg="#000000",  # Black text for better visibility
-            width=20,
+            fg="#000000",
             height=2,
             relief=tk.RAISED,
             bd=3,
@@ -190,7 +264,7 @@ class GSMMonitorGUI:
             activebackground="#C0392B",
             activeforeground="#000000"
         )
-        self.stop_button.pack(side=tk.LEFT, padx=8)
+        self.stop_button.pack(fill=tk.X)
         
     def create_provider_row(self, parent, provider):
         """Create a row for provider signal display"""
@@ -293,9 +367,8 @@ class GSMMonitorGUI:
             timestamp_str = self.last_update_time.strftime("%H:%M:%S")
             self.timestamp_label["text"] = f"Last update: {timestamp_str}"
             self.timestamp_label["fg"] = "#00FF88"
-            
-            # Reset countdown timer to 5 seconds
-            self.next_update_seconds = 5
+            # Reset countdown timer to 0.2 seconds
+            self.next_update_seconds = 0.2
             self.update_countdown()
             
             # Normalize power values for display (0-100 scale)
@@ -352,12 +425,92 @@ class GSMMonitorGUI:
                 
                 self.status_label["text"] = f"Active providers detected: {active_count} | Last scan: successful"
                 self.status_label["fg"] = "#27AE60"
+                
+                # Update signal history and graphs
+                self.update_graphs(signals)
             else:
                 print("DEBUG: No signals received")
                 self.status_label["text"] = "No signals detected | Check RTL-SDR connection"
                 self.status_label["fg"] = "#E67E22"
         
         self.root.after(0, update)
+    
+    def update_graphs(self, signals):
+        """Update the signal history graphs for each provider"""
+        current_time = datetime.now()
+        time_str = current_time.strftime("%H:%M:%S")
+        
+        # Update history for all providers
+        for provider in self.signal_history.keys():
+            if provider in signals:
+                # Add new data point
+                self.signal_history[provider]["times"].append(time_str)
+                self.signal_history[provider]["powers"].append(signals[provider])
+            else:
+                # Keep history size consistent but add None for missing data
+                if len(self.signal_history[provider]["times"]) > 0:
+                    self.signal_history[provider]["times"].append(time_str)
+                    self.signal_history[provider]["powers"].append(None)
+        
+        # Update each subplot
+        for provider, ax in self.axes.items():
+            ax.clear()
+            ax.set_facecolor('#1A2332')
+            ax.set_title(provider, color=self.PROVIDER_COLORS[provider], fontsize=12, fontweight='bold', pad=8)
+            # ax.set_xlabel('Time', color='#A0B0C0', fontsize=9)
+            ax.set_ylabel('Power (dBm)', color='#A0B0C0', fontsize=9)
+            ax.tick_params(colors='#7A8BA0', labelsize=8)
+            ax.grid(True, alpha=0.2, color='#5A6A7A')
+            ax.spines['bottom'].set_color('#5A6A7A')
+            ax.spines['top'].set_color('#5A6A7A')
+            ax.spines['left'].set_color('#5A6A7A')
+            ax.spines['right'].set_color('#5A6A7A')
+            
+            # Plot data if available
+            times = list(self.signal_history[provider]["times"])
+            powers = list(self.signal_history[provider]["powers"])
+            
+            if powers and any(p is not None for p in powers):
+                # Filter out None values for plotting
+                valid_indices = [i for i, p in enumerate(powers) if p is not None]
+                valid_times = [times[i] for i in valid_indices]
+                valid_powers = [powers[i] for i in valid_indices]
+                
+                if valid_powers:
+                    # Plot line
+                    ax.plot(range(len(valid_powers)), valid_powers, 
+                           color=self.PROVIDER_COLORS[provider], 
+                           linewidth=2, 
+                           marker='o', 
+                           markersize=4,
+                           label=f'{provider}')
+                    
+                    # Show only every 5th time label to avoid crowding
+                    tick_positions = range(0, len(valid_powers), max(1, len(valid_powers) // 5))
+                    tick_labels = [valid_times[i] if i < len(valid_times) else '' for i in tick_positions]
+                    ax.set_xticks(tick_positions)
+                    ax.set_xticklabels(tick_labels, rotation=45, ha='right')
+                    
+                    # Add latest value annotation
+                    if len(valid_powers) > 0:
+                        latest_power = valid_powers[-1]
+                        ax.annotate(f'{latest_power:.2f}', 
+                                   xy=(len(valid_powers)-1, latest_power),
+                                   xytext=(5, 5), 
+                                   textcoords='offset points',
+                                   color=self.PROVIDER_COLORS[provider],
+                                   fontsize=8,
+                                   fontweight='bold')
+            else:
+                # No data yet
+                ax.text(0.5, 0.5, 'No data yet', 
+                       horizontalalignment='center',
+                       verticalalignment='center',
+                       transform=ax.transAxes,
+                       color='#7A8BA0',
+                       fontsize=10)
+        
+        self.canvas.draw()
     
     def update_countdown(self):
         """Update the countdown timer for next scan"""
