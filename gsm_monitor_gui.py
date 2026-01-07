@@ -40,6 +40,11 @@ class GSMMonitorGUI:
         self.countdown_timer = None
         self.previous_values = {}  # Store previous values for comparison
         
+        # Scanning session tracking
+        self.scan_start_time = None
+        self.total_scan_time = 0  # in seconds
+        self.elapsed_timer = None
+        
         # Signal history for graphs (store last 50 data points per provider)
         self.signal_history = {
             "Orange": {"times": deque(maxlen=50), "powers": deque(maxlen=50)},
@@ -128,7 +133,17 @@ class GSMMonitorGUI:
             bg="#263447",
             fg="#7A8BA0"
         )
-        self.countdown_label.pack(pady=(0, 8), anchor="w", padx=15)
+        self.countdown_label.pack(pady=(0, 2), anchor="w", padx=15)
+        
+        # Total scan time
+        self.elapsed_time_label = tk.Label(
+            info_frame,
+            text="Total scan time: 00:00:00",
+            font=("Helvetica", 9, "bold"),
+            bg="#263447",
+            fg="#00FF88"
+        )
+        self.elapsed_time_label.pack(pady=(0, 8), anchor="w", padx=15)
         
         # Signal strength panel (LEFT COLUMN)
         signal_frame = tk.Frame(left_column, bg="#263447", relief=tk.RIDGE, bd=2)
@@ -512,6 +527,21 @@ class GSMMonitorGUI:
         
         self.canvas.draw()
     
+    def update_elapsed_time(self):
+        """Update the total scan time display"""
+        if self.is_scanning and self.scan_start_time:
+            elapsed = datetime.now() - self.scan_start_time
+            hours = int(elapsed.total_seconds() // 3600)
+            minutes = int((elapsed.total_seconds() % 3600) // 60)
+            seconds = int(elapsed.total_seconds() % 60)
+            
+            time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            self.elapsed_time_label["text"] = f"Total scan time: {time_str}"
+            self.elapsed_time_label["fg"] = "#00FF88"
+            
+            # Update every second
+            self.elapsed_timer = self.root.after(1000, self.update_elapsed_time)
+    
     def update_countdown(self):
         """Update the countdown timer for next scan"""
         if self.is_scanning and self.next_update_seconds > 0:
@@ -528,6 +558,8 @@ class GSMMonitorGUI:
         """Start the scanning process"""
         if not self.is_scanning:
             self.is_scanning = True
+            self.scan_start_time = datetime.now()  # Start timer
+            
             self.start_button["state"] = tk.DISABLED
             self.start_button["bg"] = "#95A5A6"
             self.start_button["fg"] = "#000000"
@@ -536,6 +568,9 @@ class GSMMonitorGUI:
             self.stop_button["fg"] = "#000000"
             self.status_label["text"] = "Initializing scan... Please wait"
             self.status_label["fg"] = "#3498DB"
+            
+            # Start elapsed time counter
+            self.update_elapsed_time()
             
             # Start scanner in background
             self.scanner.start_scanning(
@@ -548,10 +583,24 @@ class GSMMonitorGUI:
         if self.is_scanning:
             self.is_scanning = False
             
-            # Cancel countdown timer
+            # Cancel timers
             if self.countdown_timer:
                 self.root.after_cancel(self.countdown_timer)
                 self.countdown_timer = None
+            
+            if self.elapsed_timer:
+                self.root.after_cancel(self.elapsed_timer)
+                self.elapsed_timer = None
+            
+            # Calculate total scan time
+            if self.scan_start_time:
+                elapsed = datetime.now() - self.scan_start_time
+                hours = int(elapsed.total_seconds() // 3600)
+                minutes = int((elapsed.total_seconds() % 3600) // 60)
+                seconds = int(elapsed.total_seconds() % 60)
+                final_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                self.elapsed_time_label["text"] = f"Total scan time: {final_time} (stopped)"
+                self.elapsed_time_label["fg"] = "#95A5A6"
             
             self.start_button["state"] = tk.NORMAL
             self.start_button["bg"] = "#27AE60"

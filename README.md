@@ -5,9 +5,12 @@ Educational project for monitoring GSM signal strength from Romanian mobile oper
 ## Features
 
 - Real-time signal strength monitoring (Orange, Vodafone, Telekom, Digi)
-- Visual progress bars with trend indicators
+- Visual progress bars with trend indicators (↑/↓)
+- Real-time signal attenuation graphs (2x2 grid layout)
+- Total scan time tracking (elapsed time counter)
 - GSM-900 and GSM-1800 band scanning
 - Automatic 5-second interval updates
+- Two-column interface layout for better visibility
 
 ## Requirements
 
@@ -67,10 +70,14 @@ RTL-SDR → rtl_power → CSV → scan_with_rtl_power()
   - `freq_to_provider()`: Maps frequency to operator
   - `aggregate_by_provider()`: Averages signal strength
   
-- `gsm_monitor_gui.py`: Tkinter GUI
+- `gsm_monitor_gui.py`: Tkinter GUI with Matplotlib
+  - Two-column layout (controls left, graphs right)
   - Threading for responsive interface
   - Progress bars with gradients
   - Trend indicators (↑/↓)
+  - Real-time signal graphs (2x2 grid)
+  - Elapsed time tracking
+  - Auto-update every 5 seconds
 
 ## Legal Notice
 
